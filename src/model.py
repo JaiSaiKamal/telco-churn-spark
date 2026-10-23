@@ -58,11 +58,21 @@ MODEL_CONFIGS: dict[str, dict[str, str]] = {
 
 
 def make_spark(app_name: str = "TelcoChurn") -> SparkSession:
-    return (SparkSession.builder.master("local[*]").appName(app_name)
-            .config("spark.ui.enabled", "false")
-            .config("spark.driver.bindAddress", "127.0.0.1")
-            .config("spark.sql.shuffle.partitions", "4")
-            .getOrCreate())
+    session = (SparkSession.builder.master("local[*]").appName(app_name)
+               .config("spark.ui.enabled", "false")
+               .config("spark.driver.bindAddress", "127.0.0.1")
+               .config("spark.sql.shuffle.partitions", "4")
+               # Use algorithm v1 to avoid NativeIO filesystem commits on Windows
+               .config("spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version", "1")
+               .getOrCreate())
+
+    # Disable Hadoop native IO (avoids UnsatisfiedLinkError for NativeIO$Windows.access0
+    # when hadoop.dll version does not match the Hadoop jars bundled inside PySpark).
+    hconf = session.sparkContext._jsc.hadoopConfiguration()
+    hconf.setBoolean("io.native.lib.available", False)
+    hconf.set("fs.file.impl.disable.cache", "true")
+
+    return session
 
 
 def load_dataset(spark: SparkSession, csv_path: str | Path) -> DataFrame:
