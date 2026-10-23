@@ -5,6 +5,10 @@ from pathlib import Path
 from typing import Any
 import os
 
+# Configure JAVA_HOME on Linux / Streamlit Cloud if not already set
+if "JAVA_HOME" not in os.environ and Path("/usr/lib/jvm/default-java").exists():
+    os.environ["JAVA_HOME"] = "/usr/lib/jvm/default-java"
+
 # Configure HADOOP_HOME on Windows if not already set
 if "HADOOP_HOME" not in os.environ:
     if Path("C:/hadoop/bin/winutils.exe").exists():
@@ -58,10 +62,11 @@ MODEL_CONFIGS: dict[str, dict[str, str]] = {
 
 
 def make_spark(app_name: str = "TelcoChurn") -> SparkSession:
-    session = (SparkSession.builder.master("local[*]").appName(app_name)
+    session = (SparkSession.builder.master("local[2]").appName(app_name)
                .config("spark.ui.enabled", "false")
                .config("spark.driver.bindAddress", "127.0.0.1")
-               .config("spark.sql.shuffle.partitions", "4")
+               .config("spark.sql.shuffle.partitions", "2")
+               .config("spark.driver.memory", "512m")
                # Use algorithm v1 to avoid NativeIO filesystem commits on Windows
                .config("spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version", "1")
                .getOrCreate())

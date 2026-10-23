@@ -151,11 +151,9 @@ if METRICS_PATH.exists():
 
 models_data: dict = metrics.get("models", {})
 best_model_name: str = metrics.get("best_model", next(iter(available_models), ""))
-default_index = (
-    list(available_models.keys()).index(best_model_name)
-    if best_model_name in available_models
-    else 0
-)
+default_index = 0
+if available_models and best_model_name in available_models:
+    default_index = list(available_models.keys()).index(best_model_name)
 
 # ─────────────────────────────────────────────
 #  Sidebar
@@ -510,227 +508,235 @@ with tab_scores:
 # ════════════════════════════════════════════════════════
 with tab_predict:
     st.subheader("👤 Interactive Single-Customer Churn Prediction")
-    st.markdown(
-        "Fill in the customer details below, choose which model to use, "
-        "and click **Predict Churn** to get a probability estimate."
-    )
 
-    # Model selector + quick metrics display
-    sel_col, info_col = st.columns([2, 2])
-    with sel_col:
-        selected_model_name = st.selectbox(
-            "🤖 Select Model",
-            options=list(available_models.keys()),
-            index=default_index,
-            help="Switch between Logistic Regression, Random Forest, GBT, or Decision Tree.",
-        )
-    with info_col:
-        _sel_metrics = models_data.get(selected_model_name, {})
-        if _sel_metrics:
-            mc1, mc2, mc3 = st.columns(3)
-            mc1.metric("Accuracy", f"{_sel_metrics.get('accuracy', 0):.1%}")
-            mc2.metric("F1-Score", f"{_sel_metrics.get('f1', 0):.3f}")
-            mc3.metric("ROC AUC", f"{_sel_metrics.get('roc_auc', 0):.3f}")
-
-    chosen_model_path = available_models[selected_model_name]
-    active_model = get_model(
-        str(chosen_model_path), chosen_model_path.stat().st_mtime
-    )
-
-    st.markdown("---")
-
-    with st.form("customer_form"):
-        st.markdown("##### 👤 Demographics")
-        a, b, c = st.columns(3)
-        gender = a.selectbox("Gender", ["Female", "Male"])
-        senior = a.selectbox("Senior Citizen", [0, 1], format_func=lambda x: "Yes" if x else "No")
-        partner = a.selectbox("Has Partner", ["Yes", "No"])
-        dependents = b.selectbox("Has Dependents", ["Yes", "No"])
-
-        st.markdown("##### 📱 Services")
-        s1, s2, s3 = st.columns(3)
-        phone = s1.selectbox("Phone Service", ["Yes", "No"])
-        lines = s1.selectbox("Multiple Lines", ["No", "Yes", "No phone service"])
-        internet = s2.selectbox("Internet Service", ["DSL", "Fiber optic", "No"])
-        security = s2.selectbox("Online Security", ["No", "Yes", "No internet service"])
-        backup = s2.selectbox("Online Backup", ["No", "Yes", "No internet service"])
-        protection = s3.selectbox("Device Protection", ["No", "Yes", "No internet service"])
-        support = s3.selectbox("Tech Support", ["No", "Yes", "No internet service"])
-        tv = s3.selectbox("Streaming TV", ["No", "Yes", "No internet service"])
-        movies = s3.selectbox("Streaming Movies", ["No", "Yes", "No internet service"])
-
-        st.markdown("##### 💳 Billing")
-        b1, b2, b3 = st.columns(3)
-        contract = b1.selectbox("Contract", ["Month-to-month", "One year", "Two year"])
-        paperless = b1.selectbox("Paperless Billing", ["Yes", "No"])
-        payment = b2.selectbox(
-            "Payment Method",
-            ["Electronic check", "Mailed check", "Bank transfer (automatic)", "Credit card (automatic)"],
-        )
-        tenure = b3.slider("Tenure (months)", 0, 72, 12)
-        monthly = b3.number_input("Monthly Charges ($)", min_value=0.0, max_value=300.0, value=70.0, step=1.0)
-        total = b3.number_input("Total Charges ($)", min_value=0.0, max_value=20000.0, value=float(tenure * monthly), step=10.0)
-
-        submitted = st.form_submit_button(
-            f"🔍 Predict Churn with {selected_model_name}", type="primary", use_container_width=True
+    if not available_models:
+        st.info("ℹ️ No trained models are currently available. Please click **🔄 Retrain All Models** in the sidebar to train them.")
+    else:
+        st.markdown(
+            "Fill in the customer details below, choose which model to use, "
+            "and click **Predict Churn** to get a probability estimate."
         )
 
-    if submitted:
-        record = {
-            "gender": gender, "SeniorCitizen": senior, "Partner": partner,
-            "Dependents": dependents, "tenure": tenure, "PhoneService": phone,
-            "MultipleLines": lines, "InternetService": internet,
-            "OnlineSecurity": security, "OnlineBackup": backup,
-            "DeviceProtection": protection, "TechSupport": support,
-            "StreamingTV": tv, "StreamingMovies": movies, "Contract": contract,
-            "PaperlessBilling": paperless, "PaymentMethod": payment,
-            "MonthlyCharges": monthly, "TotalCharges": total,
-        }
-        with st.spinner("Scoring with Spark MLlib…"):
-            output = predict_records(get_spark(), active_model, [record])[0]
+        # Model selector + quick metrics display
+        sel_col, info_col = st.columns([2, 2])
+        with sel_col:
+            selected_model_name = st.selectbox(
+                "🤖 Select Model",
+                options=list(available_models.keys()),
+                index=default_index,
+                help="Switch between Logistic Regression, Random Forest, GBT, or Decision Tree.",
+            )
+        with info_col:
+            _sel_metrics = models_data.get(selected_model_name, {})
+            if _sel_metrics:
+                mc1, mc2, mc3 = st.columns(3)
+                mc1.metric("Accuracy", f"{_sel_metrics.get('accuracy', 0):.1%}")
+                mc2.metric("F1-Score", f"{_sel_metrics.get('f1', 0):.3f}")
+                mc3.metric("ROC AUC", f"{_sel_metrics.get('roc_auc', 0):.3f}")
 
-        probability = output["churn_probability"]
-        is_churn = output["prediction"] == "Yes"
+        chosen_model_path = available_models[selected_model_name]
+        active_model = get_model(
+            str(chosen_model_path), chosen_model_path.stat().st_mtime
+        )
 
         st.markdown("---")
-        r1, r2 = st.columns([1, 2])
-        with r1:
-            if is_churn:
-                st.error(f"### ⚠️ High Churn Risk\n**{probability:.1%}** estimated probability")
-            else:
-                st.success(f"### ✅ Low Churn Risk\n**{probability:.1%}** estimated probability")
-            st.progress(probability, text="Churn probability")
 
-        with r2:
-            st.markdown(f"**Model used:** `{selected_model_name}`")
-            st.markdown(f"**Prediction:** `{'Churn' if is_churn else 'No Churn'}`")
-            st.markdown(f"**Churn probability:** `{probability:.4f}`")
-            st.markdown(f"**Retain probability:** `{1 - probability:.4f}`")
-            prob_df = pd.DataFrame(
-                {"Outcome": ["No Churn", "Churn"], "Probability": [1 - probability, probability]}
+        with st.form("customer_form"):
+            st.markdown("##### 👤 Demographics")
+            a, b, c = st.columns(3)
+            gender = a.selectbox("Gender", ["Female", "Male"])
+            senior = a.selectbox("Senior Citizen", [0, 1], format_func=lambda x: "Yes" if x else "No")
+            partner = a.selectbox("Has Partner", ["Yes", "No"])
+            dependents = b.selectbox("Has Dependents", ["Yes", "No"])
+
+            st.markdown("##### 📱 Services")
+            s1, s2, s3 = st.columns(3)
+            phone = s1.selectbox("Phone Service", ["Yes", "No"])
+            lines = s1.selectbox("Multiple Lines", ["No", "Yes", "No phone service"])
+            internet = s2.selectbox("Internet Service", ["DSL", "Fiber optic", "No"])
+            security = s2.selectbox("Online Security", ["No", "Yes", "No internet service"])
+            backup = s2.selectbox("Online Backup", ["No", "Yes", "No internet service"])
+            protection = s3.selectbox("Device Protection", ["No", "Yes", "No internet service"])
+            support = s3.selectbox("Tech Support", ["No", "Yes", "No internet service"])
+            tv = s3.selectbox("Streaming TV", ["No", "Yes", "No internet service"])
+            movies = s3.selectbox("Streaming Movies", ["No", "Yes", "No internet service"])
+
+            st.markdown("##### 💳 Billing")
+            b1, b2, b3 = st.columns(3)
+            contract = b1.selectbox("Contract", ["Month-to-month", "One year", "Two year"])
+            paperless = b1.selectbox("Paperless Billing", ["Yes", "No"])
+            payment = b2.selectbox(
+                "Payment Method",
+                ["Electronic check", "Mailed check", "Bank transfer (automatic)", "Credit card (automatic)"],
             )
-            st.bar_chart(prob_df.set_index("Outcome"))
+            tenure = b3.slider("Tenure (months)", 0, 72, 12)
+            monthly = b3.number_input("Monthly Charges ($)", min_value=0.0, max_value=300.0, value=70.0, step=1.0)
+            total = b3.number_input("Total Charges ($)", min_value=0.0, max_value=20000.0, value=float(tenure * monthly), step=10.0)
 
-        # All models comparison for same customer
-        if len(available_models) > 1:
+            submitted = st.form_submit_button(
+                f"🔍 Predict Churn with {selected_model_name}", type="primary", use_container_width=True
+            )
+
+        if submitted:
+            record = {
+                "gender": gender, "SeniorCitizen": senior, "Partner": partner,
+                "Dependents": dependents, "tenure": tenure, "PhoneService": phone,
+                "MultipleLines": lines, "InternetService": internet,
+                "OnlineSecurity": security, "OnlineBackup": backup,
+                "DeviceProtection": protection, "TechSupport": support,
+                "StreamingTV": tv, "StreamingMovies": movies, "Contract": contract,
+                "PaperlessBilling": paperless, "PaymentMethod": payment,
+                "MonthlyCharges": monthly, "TotalCharges": total,
+            }
+            with st.spinner("Scoring with Spark MLlib…"):
+                output = predict_records(get_spark(), active_model, [record])[0]
+
+            probability = output["churn_probability"]
+            is_churn = output["prediction"] == "Yes"
+
             st.markdown("---")
-            with st.expander("📊 See this customer's score across ALL models"):
-                all_scores = []
-                for mname, mpath in available_models.items():
-                    mdl = get_model(str(mpath), mpath.stat().st_mtime)
-                    out = predict_records(get_spark(), mdl, [record])[0]
-                    all_scores.append({
-                        "Model": mname,
-                        "Churn Probability": f"{out['churn_probability']:.4f}",
-                        "Prediction": out["prediction"],
-                        "Best Model?": "🏆 Yes" if mname == best_model_name else "—",
-                    })
-                st.dataframe(
-                    pd.DataFrame(all_scores), use_container_width=True, hide_index=True
+            r1, r2 = st.columns([1, 2])
+            with r1:
+                if is_churn:
+                    st.error(f"### ⚠️ High Churn Risk\n**{probability:.1%}** estimated probability")
+                else:
+                    st.success(f"### ✅ Low Churn Risk\n**{probability:.1%}** estimated probability")
+                st.progress(probability, text="Churn probability")
+
+            with r2:
+                st.markdown(f"**Model used:** `{selected_model_name}`")
+                st.markdown(f"**Prediction:** `{'Churn' if is_churn else 'No Churn'}`")
+                st.markdown(f"**Churn probability:** `{probability:.4f}`")
+                st.markdown(f"**Retain probability:** `{1 - probability:.4f}`")
+                prob_df = pd.DataFrame(
+                    {"Outcome": ["No Churn", "Churn"], "Probability": [1 - probability, probability]}
                 )
-                prob_compare = pd.DataFrame([
-                    {"Model": r["Model"], "Churn Probability": float(r["Churn Probability"])}
-                    for r in all_scores
-                ]).set_index("Model")
-                st.bar_chart(prob_compare)
+                st.bar_chart(prob_df.set_index("Outcome"))
+
+            # All models comparison for same customer
+            if len(available_models) > 1:
+                st.markdown("---")
+                with st.expander("📊 See this customer's score across ALL models"):
+                    all_scores = []
+                    for mname, mpath in available_models.items():
+                        mdl = get_model(str(mpath), mpath.stat().st_mtime)
+                        out = predict_records(get_spark(), mdl, [record])[0]
+                        all_scores.append({
+                            "Model": mname,
+                            "Churn Probability": f"{out['churn_probability']:.4f}",
+                            "Prediction": out["prediction"],
+                            "Best Model?": "🏆 Yes" if mname == best_model_name else "—",
+                        })
+                    st.dataframe(
+                        pd.DataFrame(all_scores), use_container_width=True, hide_index=True
+                    )
+                    prob_compare = pd.DataFrame([
+                        {"Model": r["Model"], "Churn Probability": float(r["Churn Probability"])}
+                        for r in all_scores
+                    ]).set_index("Model")
+                    st.bar_chart(prob_compare)
 
 # ════════════════════════════════════════════════════════
 #  TAB 5 — BATCH SCORING
 # ════════════════════════════════════════════════════════
 with tab_batch:
     st.subheader("📁 Batch Scoring — Score Multiple Customers at Once")
-    st.markdown(
-        "Upload a CSV file containing customer feature columns. "
-        "`customerID` and `Churn` columns are optional and will be preserved in the output."
-    )
 
-    b_sel_col, b_info_col = st.columns([2, 2])
-    with b_sel_col:
-        batch_model_name = st.selectbox(
-            "🤖 Select Model for Batch Scoring",
-            options=list(available_models.keys()),
-            index=default_index,
-            key="batch_model_select",
+    if not available_models:
+        st.info("ℹ️ No trained models are currently available. Please click **🔄 Retrain All Models** in the sidebar to train them.")
+    else:
+        st.markdown(
+            "Upload a CSV file containing customer feature columns. "
+            "`customerID` and `Churn` columns are optional and will be preserved in the output."
         )
-    with b_info_col:
-        _bm = models_data.get(batch_model_name, {})
-        if _bm:
-            bc1, bc2, bc3 = st.columns(3)
-            bc1.metric("Accuracy", f"{_bm.get('accuracy', 0):.1%}")
-            bc2.metric("F1-Score", f"{_bm.get('f1', 0):.3f}")
-            bc3.metric("ROC AUC", f"{_bm.get('roc_auc', 0):.3f}")
 
-    batch_model_path = available_models[batch_model_name]
-    active_batch_model = get_model(
-        str(batch_model_path), batch_model_path.stat().st_mtime
-    )
+        b_sel_col, b_info_col = st.columns([2, 2])
+        with b_sel_col:
+            batch_model_name = st.selectbox(
+                "🤖 Select Model for Batch Scoring",
+                options=list(available_models.keys()),
+                index=default_index,
+                key="batch_model_select",
+            )
+        with b_info_col:
+            _bm = models_data.get(batch_model_name, {})
+            if _bm:
+                bc1, bc2, bc3 = st.columns(3)
+                bc1.metric("Accuracy", f"{_bm.get('accuracy', 0):.1%}")
+                bc2.metric("F1-Score", f"{_bm.get('f1', 0):.3f}")
+                bc3.metric("ROC AUC", f"{_bm.get('roc_auc', 0):.3f}")
 
-    st.markdown("**Required feature columns:**")
-    st.code(", ".join(FEATURES), language=None)
+        batch_model_path = available_models[batch_model_name]
+        active_batch_model = get_model(
+            str(batch_model_path), batch_model_path.stat().st_mtime
+        )
 
-    uploaded = st.file_uploader("Upload Customer CSV", type="csv", key="batch_csv")
+        st.markdown("**Required feature columns:**")
+        st.code(", ".join(FEATURES), language=None)
 
-    if uploaded:
-        try:
-            batch_df = pd.read_csv(uploaded)
-            missing_cols = sorted(set(FEATURES) - set(batch_df.columns))
-            if missing_cols:
-                st.error(f"❌ Missing required columns: `{', '.join(missing_cols)}`")
-            else:
-                with st.spinner(f"Scoring {len(batch_df):,} customers with {batch_model_name}…"):
-                    scores = predict_records(
-                        get_spark(),
-                        active_batch_model,
-                        batch_df[FEATURES].to_dict(orient="records"),
+        uploaded = st.file_uploader("Upload Customer CSV", type="csv", key="batch_csv")
+
+        if uploaded:
+            try:
+                batch_df = pd.read_csv(uploaded)
+                missing_cols = sorted(set(FEATURES) - set(batch_df.columns))
+                if missing_cols:
+                    st.error(f"❌ Missing required columns: `{', '.join(missing_cols)}`")
+                else:
+                    with st.spinner(f"Scoring {len(batch_df):,} customers with {batch_model_name}…"):
+                        scores = predict_records(
+                            get_spark(),
+                            active_batch_model,
+                            batch_df[FEATURES].to_dict(orient="records"),
+                        )
+
+                    result = batch_df.copy()
+                    result["churn_probability"] = [round(x["churn_probability"], 4) for x in scores]
+                    result["predicted_churn"] = [x["prediction"] for x in scores]
+
+                    # Summary stats
+                    total_customers = len(result)
+                    predicted_churn = (result["predicted_churn"] == "Yes").sum()
+                    avg_prob = result["churn_probability"].mean()
+
+                    st.markdown("---")
+                    s1, s2, s3, s4 = st.columns(4)
+                    s1.metric("Total Customers", f"{total_customers:,}")
+                    s2.metric("Predicted to Churn", f"{predicted_churn:,}")
+                    s3.metric("Churn Rate", f"{predicted_churn / total_customers:.1%}")
+                    s4.metric("Avg Churn Probability", f"{avg_prob:.3f}")
+
+                    # High-risk customers
+                    high_risk = result[result["churn_probability"] >= 0.7].shape[0]
+                    med_risk = result[(result["churn_probability"] >= 0.4) & (result["churn_probability"] < 0.7)].shape[0]
+                    low_risk = result[result["churn_probability"] < 0.4].shape[0]
+
+                    r1, r2, r3 = st.columns(3)
+                    r1.metric("🔴 High Risk (≥70%)", f"{high_risk:,}")
+                    r2.metric("🟡 Medium Risk (40–70%)", f"{med_risk:,}")
+                    r3.metric("🟢 Low Risk (<40%)", f"{low_risk:,}")
+
+                    # Probability distribution chart
+                    st.markdown("#### Churn Probability Distribution")
+                    hist_bins = pd.cut(
+                        result["churn_probability"],
+                        bins=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+                        labels=["0-10%", "10-20%", "20-30%", "30-40%", "40-50%",
+                                "50-60%", "60-70%", "70-80%", "80-90%", "90-100%"],
+                    ).value_counts().sort_index()
+                    st.bar_chart(hist_bins)
+
+                    st.markdown("---")
+                    st.markdown("#### Scored Results")
+                    st.dataframe(result, use_container_width=True, hide_index=True)
+
+                    st.download_button(
+                        label=f"⬇️ Download Scored CSV ({batch_model_name})",
+                        data=result.to_csv(index=False).encode("utf-8"),
+                        file_name=f"churn_predictions_{batch_model_name.replace(' ', '_').lower()}.csv",
+                        mime="text/csv",
+                        type="primary",
                     )
 
-                result = batch_df.copy()
-                result["churn_probability"] = [round(x["churn_probability"], 4) for x in scores]
-                result["predicted_churn"] = [x["prediction"] for x in scores]
-
-                # Summary stats
-                total_customers = len(result)
-                predicted_churn = (result["predicted_churn"] == "Yes").sum()
-                avg_prob = result["churn_probability"].mean()
-
-                st.markdown("---")
-                s1, s2, s3, s4 = st.columns(4)
-                s1.metric("Total Customers", f"{total_customers:,}")
-                s2.metric("Predicted to Churn", f"{predicted_churn:,}")
-                s3.metric("Churn Rate", f"{predicted_churn / total_customers:.1%}")
-                s4.metric("Avg Churn Probability", f"{avg_prob:.3f}")
-
-                # High-risk customers
-                high_risk = result[result["churn_probability"] >= 0.7].shape[0]
-                med_risk = result[(result["churn_probability"] >= 0.4) & (result["churn_probability"] < 0.7)].shape[0]
-                low_risk = result[result["churn_probability"] < 0.4].shape[0]
-
-                r1, r2, r3 = st.columns(3)
-                r1.metric("🔴 High Risk (≥70%)", f"{high_risk:,}")
-                r2.metric("🟡 Medium Risk (40–70%)", f"{med_risk:,}")
-                r3.metric("🟢 Low Risk (<40%)", f"{low_risk:,}")
-
-                # Probability distribution chart
-                st.markdown("#### Churn Probability Distribution")
-                hist_bins = pd.cut(
-                    result["churn_probability"],
-                    bins=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
-                    labels=["0-10%", "10-20%", "20-30%", "30-40%", "40-50%",
-                            "50-60%", "60-70%", "70-80%", "80-90%", "90-100%"],
-                ).value_counts().sort_index()
-                st.bar_chart(hist_bins)
-
-                st.markdown("---")
-                st.markdown("#### Scored Results")
-                st.dataframe(result, use_container_width=True, hide_index=True)
-
-                st.download_button(
-                    label=f"⬇️ Download Scored CSV ({batch_model_name})",
-                    data=result.to_csv(index=False).encode("utf-8"),
-                    file_name=f"churn_predictions_{batch_model_name.replace(' ', '_').lower()}.csv",
-                    mime="text/csv",
-                    type="primary",
-                )
-
-        except Exception as exc:
-            st.error(f"Error scoring file: {exc}")
+            except Exception as exc:
+                st.error(f"Error scoring file: {exc}")
