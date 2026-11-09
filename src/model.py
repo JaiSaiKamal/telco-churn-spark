@@ -243,7 +243,7 @@ def train(csv_path: str | Path, model_dir_or_path: str | Path, model_types: list
                 "accuracy": round(acc, 4),
                 "f1": round(f1, 4),
                 "roc_auc": round(auc, 4),
-                "path": str(save_path),
+                "path": f"models/{m_key}",
                 "top_features": feature_imp[:10],
             }
 

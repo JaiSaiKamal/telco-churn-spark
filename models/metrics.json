@@ -1,0 +1,217 @@
+{
+  "rows": 7043,
+  "train_rows": 5698,
+  "test_rows": 1345,
+  "churn_rate": 0.2654,
+  "best_model": "Gradient-Boosted Trees (GBT)",
+  "best_model_key": "gbt",
+  "models": {
+    "Logistic Regression": {
+      "key": "logistic_regression",
+      "name": "Logistic Regression",
+      "description": "Linear classification baseline with L2 regularization",
+      "accuracy": 0.8082,
+      "f1": 0.7968,
+      "roc_auc": 0.8397,
+      "path": "models/logistic_regression",
+      "top_features": [
+        {
+          "feature": "Contract_Two year",
+          "importance": 0.5302
+        },
+        {
+          "feature": "Contract_Month-to-month",
+          "importance": 0.5037
+        },
+        {
+          "feature": "InternetService_Fiber optic",
+          "importance": 0.3522
+        },
+        {
+          "feature": "InternetService_DSL",
+          "importance": 0.3028
+        },
+        {
+          "feature": "PaymentMethod_Electronic check",
+          "importance": 0.2514
+        },
+        {
+          "feature": "OnlineSecurity_No",
+          "importance": 0.232
+        },
+        {
+          "feature": "TechSupport_No",
+          "importance": 0.218
+        },
+        {
+          "feature": "SeniorCitizen",
+          "importance": 0.2097
+        },
+        {
+          "feature": "OnlineSecurity_Yes",
+          "importance": 0.1985
+        },
+        {
+          "feature": "TechSupport_Yes",
+          "importance": 0.1777
+        }
+      ]
+    },
+    "Random Forest": {
+      "key": "random_forest",
+      "name": "Random Forest",
+      "description": "Ensemble of 50 decision trees with feature bagging",
+      "accuracy": 0.7874,
+      "f1": 0.7633,
+      "roc_auc": 0.8314,
+      "path": "models/random_forest",
+      "top_features": [
+        {
+          "feature": "Contract_Month-to-month",
+          "importance": 0.2038
+        },
+        {
+          "feature": "TechSupport_No",
+          "importance": 0.1156
+        },
+        {
+          "feature": "tenure",
+          "importance": 0.1106
+        },
+        {
+          "feature": "Contract_Two year",
+          "importance": 0.0876
+        },
+        {
+          "feature": "OnlineSecurity_No",
+          "importance": 0.0814
+        },
+        {
+          "feature": "PaymentMethod_Electronic check",
+          "importance": 0.0647
+        },
+        {
+          "feature": "TotalCharges",
+          "importance": 0.0632
+        },
+        {
+          "feature": "Contract_One year",
+          "importance": 0.0411
+        },
+        {
+          "feature": "OnlineBackup_No",
+          "importance": 0.0264
+        },
+        {
+          "feature": "InternetService_Fiber optic",
+          "importance": 0.0257
+        }
+      ]
+    },
+    "Gradient-Boosted Trees (GBT)": {
+      "key": "gbt",
+      "name": "Gradient-Boosted Trees (GBT)",
+      "description": "Sequential boosting optimizing pseudo-residuals",
+      "accuracy": 0.797,
+      "f1": 0.7875,
+      "roc_auc": 0.8404,
+      "path": "models/gbt",
+      "top_features": [
+        {
+          "feature": "tenure",
+          "importance": 0.1572
+        },
+        {
+          "feature": "Contract_Month-to-month",
+          "importance": 0.1165
+        },
+        {
+          "feature": "MonthlyCharges",
+          "importance": 0.0996
+        },
+        {
+          "feature": "PaymentMethod_Electronic check",
+          "importance": 0.0875
+        },
+        {
+          "feature": "TotalCharges",
+          "importance": 0.0825
+        },
+        {
+          "feature": "Contract_Two year",
+          "importance": 0.0773
+        },
+        {
+          "feature": "OnlineSecurity_No",
+          "importance": 0.0609
+        },
+        {
+          "feature": "PaperlessBilling_Yes",
+          "importance": 0.0445
+        },
+        {
+          "feature": "TechSupport_No",
+          "importance": 0.0439
+        },
+        {
+          "feature": "InternetService_Fiber optic",
+          "importance": 0.0352
+        }
+      ]
+    },
+    "Decision Tree": {
+      "key": "decision_tree",
+      "name": "Decision Tree",
+      "description": "Single tree classifier for rule-based interpretability",
+      "accuracy": 0.7881,
+      "f1": 0.7838,
+      "roc_auc": 0.5586,
+      "path": "models/decision_tree",
+      "top_features": [
+        {
+          "feature": "Contract_Month-to-month",
+          "importance": 0.5749
+        },
+        {
+          "feature": "tenure",
+          "importance": 0.2157
+        },
+        {
+          "feature": "InternetService_Fiber optic",
+          "importance": 0.1623
+        },
+        {
+          "feature": "TechSupport_No",
+          "importance": 0.0349
+        },
+        {
+          "feature": "PaymentMethod_Electronic check",
+          "importance": 0.0123
+        },
+        {
+          "feature": "SeniorCitizen",
+          "importance": 0.0
+        },
+        {
+          "feature": "MonthlyCharges",
+          "importance": 0.0
+        },
+        {
+          "feature": "TotalCharges",
+          "importance": 0.0
+        },
+        {
+          "feature": "gender_Male",
+          "importance": 0.0
+        },
+        {
+          "feature": "gender_Female",
+          "importance": 0.0
+        }
+      ]
+    }
+  },
+  "accuracy": 0.797,
+  "f1": 0.7875,
+  "roc_auc": 0.8404
+}

@@ -2,7 +2,6 @@ __pycache__/
 .venv/
 venv/
 .streamlit/secrets.toml
-models/*
-!models/.gitkeep
 *.log
 .DS_Store
+

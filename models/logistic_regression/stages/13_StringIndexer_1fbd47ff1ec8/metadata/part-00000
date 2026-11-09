@@ -1,0 +1,1 @@
+{"class":"org.apache.spark.ml.feature.StringIndexerModel","timestamp":1794232547282,"sparkVersion":"3.5.6","uid":"StringIndexer_1fbd47ff1ec8","paramMap":{"inputCol":"PaperlessBilling","handleInvalid":"keep","outputCol":"PaperlessBilling__idx"},"defaultParamMap":{"stringOrderType":"frequencyDesc","handleInvalid":"error","outputCol":"StringIndexer_1fbd47ff1ec8__output"}}

@@ -87,7 +87,19 @@ def get_spark():
 
 @st.cache_resource
 def get_model(model_path: str, stamp: float):
-    return load_model(get_spark(), model_path)
+    try:
+        return load_model(get_spark(), model_path)
+    except Exception as exc:
+        # If a model directory is corrupt or has missing stages, heal it by retraining
+        st.warning(f"Corrupted or incomplete model detected at `{model_path}`. Rebuilding models...")
+        import shutil
+        p = Path(model_path)
+        if p.exists():
+            shutil.rmtree(p, ignore_errors=True)
+        res = train(DATA_PATH, MODELS_DIR, model_types="all")
+        METRICS_PATH.write_text(json.dumps(res, indent=2), encoding="utf-8")
+        st.cache_resource.clear()
+        return load_model(get_spark(), model_path)
 
 
 @st.cache_data
@@ -98,6 +110,10 @@ def load_raw_data(path: str) -> pd.DataFrame:
 # ─────────────────────────────────────────────
 #  Ensure models exist (train on first launch)
 # ─────────────────────────────────────────────
+def is_model_complete(folder: Path) -> bool:
+    return (folder / "metadata").exists() and (folder / "stages").exists()
+
+
 def ensure_models() -> None:
     if not DATA_PATH.exists():
         st.error(
@@ -110,12 +126,14 @@ def ensure_models() -> None:
         )
         st.stop()
 
-    models_exist = any(
-        (MODELS_DIR / key / "metadata").exists() for key in MODEL_CONFIGS
+    all_models_ready = (
+        METRICS_PATH.exists()
+        and all(is_model_complete(MODELS_DIR / key) for key in MODEL_CONFIGS)
     )
-    if not models_exist and not (DEFAULT_MODEL_PATH / "metadata").exists():
+
+    if not all_models_ready:
         with st.spinner(
-            "🔥 Training all Spark MLlib models for the first time — this takes ~2 min…"
+            "🔥 Training all Spark MLlib models — this takes ~1-2 min…"
         ):
             result = train(DATA_PATH, MODELS_DIR, model_types="all")
             METRICS_PATH.write_text(
@@ -133,10 +151,10 @@ ensure_models()
 available_models: dict[str, Path] = {}
 for _key, _info in MODEL_CONFIGS.items():
     _folder = MODELS_DIR / _key
-    if (_folder / "metadata").exists():
+    if is_model_complete(_folder):
         available_models[_info["name"]] = _folder
 
-if not available_models and (DEFAULT_MODEL_PATH / "metadata").exists():
+if not available_models and is_model_complete(DEFAULT_MODEL_PATH):
     available_models["Best Model"] = DEFAULT_MODEL_PATH
 
 # ─────────────────────────────────────────────
